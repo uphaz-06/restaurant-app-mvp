@@ -8,13 +8,18 @@ const {
   deleteMenuItem,
 } = require("../controllers/menuController");
 
-// Map URLs to the controller logic
-router.route("/").get(getMenuItems).post(createMenuItem);
+// Import the security middleware
+const { protect, managerOnly } = require("../middleware/auth");
+
+router
+  .route("/")
+  .get(getMenuItems) // Public access (anyone can view)
+  .post(protect, managerOnly, createMenuItem); // Protected (only managers can add)
 
 router
   .route("/:id")
-  .get(getMenuItemById)
-  .put(updateMenuItem)
-  .delete(deleteMenuItem);
+  .get(getMenuItemById) // Public access
+  .put(protect, managerOnly, updateMenuItem) // Protected (only managers can edit)
+  .delete(protect, managerOnly, deleteMenuItem); // Protected (only managers can delete)
 
 module.exports = router;

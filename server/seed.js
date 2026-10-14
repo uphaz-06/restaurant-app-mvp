@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const User = require("./models/User");
 const MenuItem = require("./models/MenuItem");
 const Table = require("./models/Table");
+const bcrypt = require("bcryptjs");
 // Import Order and Reservation models as well
 
 const seedDatabase = async () => {
@@ -15,21 +16,23 @@ const seedDatabase = async () => {
     await MenuItem.deleteMany({});
     await Table.deleteMany({});
 
-    // Insert baseline data
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash("password123", salt);
+
     await User.insertMany([
       {
         name: "Manager User",
         email: "manager@test.com",
-        password: "password123",
+        password: hashedPassword,
         role: "manager",
       },
       {
         name: "Customer User",
         email: "customer@test.com",
-        password: "password123",
+        password: hashedPassword,
         role: "customer",
       },
-    ]); // Ensure passwords are ready to be hashed later when auth is added
+    ]);
 
     await Table.insertMany([
       { tableNumber: 1, capacity: 2 },
