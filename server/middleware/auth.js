@@ -3,39 +3,39 @@ const User = require("../models/User");
 
 // Protect routes - verify token and fetch user
 const protect = async (req, res, next) => {
-  let token;
-
-  // Check if header exists and starts with 'Bearer'
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1]; // Extract token
-
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Fetch user from DB and attach to req.user (excluding password)[cite: 1]
-      req.user = await User.findById(decoded.id).select("-password");
-      next();
-    } catch (error) {
-      return res.status(401).json({ message: "Not authorized, token failed" });
-    }
+  const authorization = req.headers.authorization;
+  if (!authorization || !authorization.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Not authorized, no token" });
   }
 
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
+  try {
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is not configured");
+    }
+    const token = authorization.slice("Bearer ".length);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) {
+      return res.status(401).json({ message: "Not authorized, user not found" });
+    }
+
+    req.user = user;
+    return next();
+  } catch (error) {
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Not authorized, token failed" });
+    }
+    console.error("Authentication lookup failed:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Manager only restriction
 const managerOnly = (req, res, next) => {
   if (req.user && req.user.role === "manager") {
-    next();
+    return next();
   } else {
-    // Return 403 if role is not manager[cite: 1]
-    res.status(403).json({ message: "Not authorized as manager" });
+    return res.status(403).json({ message: "Not authorized as manager" });
   }
 };
 

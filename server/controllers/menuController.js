@@ -6,20 +6,22 @@ const getMenuItems = async (req, res) => {
   try {
     const query = {};
 
-    // Optional category filter
-    if (req.query.category) {
-      query.category = req.query.category;
+    if (typeof req.query.category === "string" && req.query.category.trim()) {
+      query.category = req.query.category.trim();
     }
 
-    // Optional case-insensitive search filter
-    if (req.query.search) {
-      query.name = { $regex: req.query.search, $options: "i" };
+    if (typeof req.query.search === "string" && req.query.search.trim()) {
+      const escapedSearch = req.query.search
+        .trim()
+        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      query.name = { $regex: escapedSearch, $options: "i" };
     }
 
     const items = await MenuItem.find(query);
-    res.status(200).json(items);
+    return res.status(200).json(items);
   } catch (error) {
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Could not fetch menu:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -27,7 +29,7 @@ const getMenuItems = async (req, res) => {
 const getMenuItemById = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: "Invalid MongoDB ID format" });
+      return res.status(400).json({ message: "Invalid menu item id" });
     }
 
     const item = await MenuItem.findById(req.params.id);
@@ -35,23 +37,25 @@ const getMenuItemById = async (req, res) => {
       return res.status(404).json({ message: "Menu item not found" });
     }
 
-    res.status(200).json(item);
+    return res.status(200).json(item);
   } catch (error) {
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Could not fetch menu item:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // POST /api/menu
 const createMenuItem = async (req, res) => {
   try {
-    const newItem = new MenuItem(req.body);
+    const newItem = new MenuItem(req.body || {});
     const savedItem = await newItem.save();
-    res.status(201).json(savedItem); // Returns 201 for successful creation
+    return res.status(201).json(savedItem);
   } catch (error) {
-    // Mongoose validation errors (like missing name or negative price) trigger this
-    res
-      .status(400)
-      .json({ message: "Invalid data provided", error: error.message });
+    if (error.name === "ValidationError" || error.name === "CastError") {
+      return res.status(400).json({ message: error.message });
+    }
+    console.error("Could not create menu item:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -59,24 +63,37 @@ const createMenuItem = async (req, res) => {
 const updateMenuItem = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: "Invalid MongoDB ID format" });
+      return res.status(400).json({ message: "Invalid menu item id" });
+    }
+
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({ message: "Update body is required" });
+    }
+    if (
+      ["__proto__", "prototype", "constructor"].some((key) =>
+        req.body.hasOwnProperty(key),
+      )
+    ) {
+      return res.status(400).json({ message: "Invalid update fields" });
     }
 
     const updatedItem = await MenuItem.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true, runValidators: true }, // runValidators ensures negative prices are still blocked
+      { new: true, runValidators: true },
     );
 
     if (!updatedItem) {
       return res.status(404).json({ message: "Menu item not found" });
     }
 
-    res.status(200).json(updatedItem);
+    return res.status(200).json(updatedItem);
   } catch (error) {
-    res
-      .status(400)
-      .json({ message: "Invalid data provided", error: error.message });
+    if (error.name === "ValidationError" || error.name === "CastError") {
+      return res.status(400).json({ message: error.message });
+    }
+    console.error("Could not update menu item:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -84,7 +101,7 @@ const updateMenuItem = async (req, res) => {
 const deleteMenuItem = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: "Invalid MongoDB ID format" });
+      return res.status(400).json({ message: "Invalid menu item id" });
     }
 
     const deletedItem = await MenuItem.findByIdAndDelete(req.params.id);
@@ -93,9 +110,10 @@ const deleteMenuItem = async (req, res) => {
       return res.status(404).json({ message: "Menu item not found" });
     }
 
-    res.status(200).json({ message: "Menu item deleted successfully" });
+    return res.status(200).json({ message: "Menu item deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Could not delete menu item:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

@@ -1,4 +1,4 @@
-import { MenuItem } from "../data/menu";
+import { MenuItem } from "../types";
 
 export interface CartItem extends MenuItem {
   quantity: number;
@@ -13,8 +13,8 @@ export interface CartState {
 
 export type CartAction =
   | { type: "ADD_ITEM"; payload: MenuItem }
-  | { type: "DECREMENT"; payload: { id: number } }
-  | { type: "UPDATE_NOTE"; payload: { id: number; note: string } }
+  | { type: "DECREMENT"; payload: { id: string } }
+  | { type: "UPDATE_NOTE"; payload: { id: string; note: string } }
   | { type: "APPLY_PROMO"; payload: string }
   | { type: "CLEAR_CART" };
 
@@ -30,12 +30,13 @@ export const cartReducer = (
 ): CartState => {
   switch (action.type) {
     case "ADD_ITEM": {
-      const existing = state.items.find((i) => i.id === action.payload.id);
+      if (!action.payload.isAvailable) return state;
+      const existing = state.items.find((i) => i._id === action.payload._id);
       if (existing) {
         return {
           ...state,
           items: state.items.map((i) =>
-            i.id === action.payload.id ? { ...i, quantity: i.quantity + 1 } : i,
+            i._id === action.payload._id ? { ...i, quantity: i.quantity + 1 } : i,
           ),
         };
       }
@@ -48,17 +49,17 @@ export const cartReducer = (
       };
     }
     case "DECREMENT": {
-      const existing = state.items.find((i) => i.id === action.payload.id);
+      const existing = state.items.find((i) => i._id === action.payload.id);
       if (existing && existing.quantity === 1) {
         return {
           ...state,
-          items: state.items.filter((i) => i.id !== action.payload.id),
+          items: state.items.filter((i) => i._id !== action.payload.id),
         };
       }
       return {
         ...state,
         items: state.items.map((i) =>
-          i.id === action.payload.id ? { ...i, quantity: i.quantity - 1 } : i,
+          i._id === action.payload.id ? { ...i, quantity: i.quantity - 1 } : i,
         ),
       };
     }
@@ -66,7 +67,7 @@ export const cartReducer = (
       return {
         ...state,
         items: state.items.map((i) =>
-          i.id === action.payload.id ? { ...i, note: action.payload.note } : i,
+          i._id === action.payload.id ? { ...i, note: action.payload.note } : i,
         ),
       };
     case "APPLY_PROMO":

@@ -13,6 +13,7 @@ const tableSchema = new mongoose.Schema({
   },
   location: {
     type: String,
+    default: "Main dining room",
   },
 });
 

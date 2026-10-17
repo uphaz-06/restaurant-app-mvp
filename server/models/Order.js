@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-// Sub-schema for individual items inside an order
 const orderItemSchema = new mongoose.Schema(
   {
     menuItem: {
@@ -18,6 +17,10 @@ const orderItemSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    note: {
+      type: String,
+      maxlength: 300,
+    },
   },
   { _id: false },
 );
@@ -27,7 +30,7 @@ const orderSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true, // Each Order stores the id of the user who placed it[cite: 1]
+      required: true,
     },
     items: [orderItemSchema],
     totalAmount: {
@@ -37,12 +40,16 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      // Order status can only be Pending, Preparing, Ready, Served, or Cancelled[cite: 1]
       enum: ["Pending", "Preparing", "Ready", "Served", "Cancelled"],
       default: "Pending",
     },
+    type: {
+      type: String,
+      enum: ["Dine-in", "Takeaway"],
+      default: "Takeaway",
+    },
   },
   { timestamps: true },
-); // createdAt and updatedAt are saved automatically[cite: 1]
+);
 
 module.exports = mongoose.model("Order", orderSchema);

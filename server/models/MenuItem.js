@@ -4,18 +4,22 @@ const menuItemSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
+    trim: true,
+    maxlength: 100,
   },
   description: {
     type: String,
+    maxlength: 500,
   },
   price: {
     type: Number,
     required: true,
-    min: 0, // Price should not be negative[cite: 1]
+    min: 0,
   },
   category: {
     type: String,
     required: true,
+    trim: true,
   },
   isAvailable: {
     type: Boolean,
@@ -23,6 +27,10 @@ const menuItemSchema = new mongoose.Schema({
   },
   imageUrl: {
     type: String,
+  },
+  isSpecial: {
+    type: Boolean,
+    default: false,
   },
 });
 

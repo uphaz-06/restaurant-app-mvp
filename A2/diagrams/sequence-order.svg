@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="420" viewBox="0 0 900 420">
+  <rect width="900" height="420" fill="#ffffff"/>
+  <text x="450" y="36" text-anchor="middle" font-size="20" font-family="Arial" font-weight="700">Customer places an order</text>
+  <text x="150" y="80" text-anchor="middle" font-size="14" font-family="Arial" font-weight="700">App</text>
+  <text x="450" y="80" text-anchor="middle" font-size="14" font-family="Arial" font-weight="700">Express Server</text>
+  <text x="750" y="80" text-anchor="middle" font-size="14" font-family="Arial" font-weight="700">MongoDB</text>
+  <line x1="150" y1="90" x2="150" y2="390" stroke="#333" stroke-dasharray="4 4"/>
+  <line x1="450" y1="90" x2="450" y2="390" stroke="#333" stroke-dasharray="4 4"/>
+  <line x1="750" y1="90" x2="750" y2="390" stroke="#333" stroke-dasharray="4 4"/>
+  <line x1="150" y1="130" x2="450" y2="130" stroke="#E63946" marker-end="url(#arrow)"/>
+  <text x="300" y="122" text-anchor="middle" font-size="12" font-family="Arial">POST /api/orders + JWT</text>
+  <line x1="450" y1="170" x2="750" y2="170" stroke="#457B9D" marker-end="url(#arrow)"/>
+  <text x="600" y="162" text-anchor="middle" font-size="12" font-family="Arial">Find menu items, check availability</text>
+  <line x1="750" y1="210" x2="450" y2="210" stroke="#457B9D" marker-end="url(#arrow)"/>
+  <text x="600" y="202" text-anchor="middle" font-size="12" font-family="Arial">Current prices and isAvailable</text>
+  <line x1="450" y1="250" x2="750" y2="250" stroke="#2A9D8F" marker-end="url(#arrow)"/>
+  <text x="600" y="242" text-anchor="middle" font-size="12" font-family="Arial">Insert Order (server-calculated total)</text>
+  <line x1="750" y1="290" x2="450" y2="290" stroke="#2A9D8F" marker-end="url(#arrow)"/>
+  <text x="600" y="282" text-anchor="middle" font-size="12" font-family="Arial">Saved order document</text>
+  <line x1="450" y1="330" x2="150" y2="330" stroke="#E63946" marker-end="url(#arrow)"/>
+  <text x="300" y="322" text-anchor="middle" font-size="12" font-family="Arial">201 + order JSON</text>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333"/>
+    </marker>
+  </defs>
+</svg>

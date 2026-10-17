@@ -2,12 +2,13 @@ const mongoose = require("mongoose");
 
 const connectDB = async () => {
   try {
-    // Connect using the URI from your .env file
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI is not configured");
+    }
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("MongoDB connected"); // Log on success
+    console.log("MongoDB connected");
   } catch (error) {
-    console.error("Database connection failed:", error.message);
-    // Terminate the execution if the connection fails
+    console.error("Database connection failed:", error);
     process.exit(1);
   }
 };

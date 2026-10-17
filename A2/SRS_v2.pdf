@@ -1,0 +1,415 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 3596 >>
+stream
+BT
+/F1 11 Tf
+14 800 Td
+(# Software Requirements Specification v2) Tj
+0 -14 Td
+(Restaurant App MVP with Server and Database  ) Tj
+0 -14 Td
+(Fall 2026 ? Assignment 2) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(## 1. Introduction) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(### 1.1 Purpose) Tj
+0 -14 Td
+(This document defines the requirements of the Restaurant App MVP, its intended audience, and th) Tj
+0 -14 Td
+(e version covered. Version 2 adds a Node.js/Express backend and MongoDB so every device reads a) Tj
+0 -14 Td
+(nd writes the same data.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(### 1.2 Scope) Tj
+0 -14 Td
+(In-scope functionality includes: user signup and login with JWT, menu browsing/search/filter, c) Tj
+0 -14 Td
+(art management, order placement and tracking, table reservation, and a manager dashboard. The E) Tj
+0 -14 Td
+(xpress server, MongoDB database, REST APIs, and role-based protected routes are now in scope.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(Out of scope: real payment gateways and push notifications.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(Problems found in A1 \(mock/local data\) and how A2 solves them:) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(| A1 problem | A2 solution |) Tj
+0 -14 Td
+(| --- | --- |) Tj
+0 -14 Td
+(| A manager price change on one phone did not appear on other phones. | Menu items live in Mong) Tj
+0 -14 Td
+(oDB. GET /api/menu returns the current price to every device. |) Tj
+0 -14 Td
+(| Marking a dish unavailable on one device left it orderable on others. | Availability is store) Tj
+0 -14 Td
+(d on MenuItem.isAvailable. Place-order rejects unavailable items. |) Tj
+0 -14 Td
+(| Reinstalling the app wiped orders and bookings. | Orders and reservations are saved on the se) Tj
+0 -14 Td
+(rver, not only on the phone. |) Tj
+0 -14 Td
+(| Login accounts existed only as a mock file inside the app. | Users are stored in MongoDB with) Tj
+0 -14 Td
+( bcrypt-hashed passwords. |) Tj
+0 -14 Td
+(| A customer order was invisible on a second phone. | GET /api/orders/my and GET /api/orders \(m) Tj
+0 -14 Td
+(anager\) read the shared Orders collection. |) Tj
+0 -14 Td
+(| Table bookings could collide because each phone kept its own list. | The server checks table ) Tj
+0 -14 Td
+(+ date + time before insert and returns 409 if taken. |) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(### 1.3 Definitions and Acronyms) Tj
+0 -14 Td
+(- **SRS**: Software Requirements Specification.) Tj
+0 -14 Td
+(- **MVP**: Minimum Viable Product.) Tj
+0 -14 Td
+(- **UML**: Unified Modeling Language.) Tj
+0 -14 Td
+(- **Hook**: A React function that lets a component use state and lifecycle features.) Tj
+0 -14 Td
+(- **Context**: A React API for sharing data across the component tree.) Tj
+0 -14 Td
+(- **Reducer**: A pure function that takes previous state and an action and returns the next sta) Tj
+0 -14 Td
+(te.) Tj
+0 -14 Td
+(- **API**: Application Programming Interface; the HTTP contract between the app and the server.) Tj
+0 -14 Td
+(- **REST**: Representational State Transfer; resources are accessed with HTTP methods.) Tj
+0 -14 Td
+(- **Endpoint**: A specific URL and method, for example POST /api/auth/login.) Tj
+0 -14 Td
+(- **JSON**: JavaScript Object Notation; the request and response data format.) Tj
+0 -14 Td
+(- **MongoDB**: Document database used to store collections for the restaurant.) Tj
+0 -14 Td
+(- **Collection**: A group of MongoDB documents, similar to a table.) Tj
+0 -14 Td
+(- **Mongoose**: Node.js library that defines schemas and talks to MongoDB.) Tj
+0 -14 Td
+(- **Middleware**: Express functions that run before a controller, such as JWT checks.) Tj
+0 -14 Td
+(- **JWT**: JSON Web Token used after login to prove who the caller is.) Tj
+0 -14 Td
+ET
+endstream
+endobj
+3 0 obj
+<< /Length 3101 >>
+stream
+BT
+/F1 11 Tf
+14 800 Td
+(- **HTTP Status Code**: Numeric result of a request \(200, 201, 400, 401, 403, 404, 409, 500\).) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(## 2. Overall Description) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(### 2.1 User Roles) Tj
+0 -14 Td
+(| Role | Key permissions and goals |) Tj
+0 -14 Td
+(| --- | --- |) Tj
+0 -14 Td
+(| Customer | Browse menu, add items to a cart, place orders, track status, reserve tables, canc) Tj
+0 -14 Td
+(el pending bookings. |) Tj
+0 -14 Td
+(| Restaurant Manager | Edit menu \(add, price, availability\), view all orders, move order status) Tj
+0 -14 Td
+( forward, accept or decline reservations. |) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(### 2.2 User Stories) Tj
+0 -14 Td
+(Unchanged from A1, except data now comes from the server: browse specials, book a table, filter) Tj
+0 -14 Td
+(/search menu, add item notes, track order status, apply promo codes in the cart, and manager me) Tj
+0 -14 Td
+(nu/order/reservation control.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(## 3. Functional Requirements) Tj
+0 -14 Td
+(Authentication:) Tj
+0 -14 Td
+(- FR-01: The system shall allow users to toggle between Login and Signup.) Tj
+0 -14 Td
+(- FR-02: The system shall validate email format and require a password with at least 8 characte) Tj
+0 -14 Td
+(rs and one digit.) Tj
+0 -14 Td
+(- FR-03: After login the app shall show customer tabs to customers and also the Dashboard to ma) Tj
+0 -14 Td
+(nagers.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(Menu & Search:) Tj
+0 -14 Td
+(- FR-04: The system shall display at least 15 menu items across 4 categories from GET /api/menu) Tj
+0 -14 Td
+(.) Tj
+0 -14 Td
+(- FR-05: The system shall disable Add for unavailable items.) Tj
+0 -14 Td
+(- FR-06: The header title shall show the count of currently displayed items.) Tj
+0 -14 Td
+(- FR-07: Search input shall debounce after 400ms and call the menu search query.) Tj
+0 -14 Td
+(- FR-08: The last 5 search terms shall appear as tappable suggestions.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(Cart & Orders:) Tj
+0 -14 Td
+(- FR-09: Users can increment, decrement, and remove cart items.) Tj
+0 -14 Td
+(- FR-10: The cart shall show subtotal, 5% service, 15% tax, and an estimated grand total.) Tj
+0 -14 Td
+(- FR-11: Promo codes WELCOME10 and FEAST20 apply to the client estimate only.) Tj
+0 -14 Td
+(- FR-12: Customers choose Dine-in or Takeaway.) Tj
+0 -14 Td
+(- FR-13: Order tracking shall poll GET /api/orders/my every 10 seconds \(no fake timer\). The ser) Tj
+0 -14 Td
+(ver, not the client, owns status.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(Reservation:) Tj
+0 -14 Td
+(- FR-14: Hourly slots from 12:00 to 22:00.) Tj
+0 -14 Td
+(- FR-15: Party size 1?12 and not above table capacity.) Tj
+0 -14 Td
+(- FR-16: Pakistani mobile numbers 03XX-XXXXXXX.) Tj
+0 -14 Td
+(- FR-17: Customers can cancel pending reservations.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(Manager Dashboard:) Tj
+0 -14 Td
+(- FR-18: Dashboard is visible only to the manager role.) Tj
+0 -14 Td
+(- FR-19: Managers can accept or decline pending reservations.) Tj
+0 -14 Td
+(- FR-20: Toggling availability and changing prices updates MongoDB so every customer sees the n) Tj
+0 -14 Td
+(ew values after refresh.) Tj
+0 -14 Td
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 4084 >>
+stream
+BT
+/F1 11 Tf
+14 800 Td
+( ) Tj
+0 -14 Td
+(## 4. Non-Functional Requirements) Tj
+0 -14 Td
+(- Usability: Forms validate inline and clear errors when the user corrects a field.) Tj
+0 -14 Td
+(- Performance: MenuItemCard uses React.memo; add-to-cart uses useCallback.) Tj
+0 -14 Td
+(- Responsiveness: Screens use safe areas and work on phone-sized layouts.) Tj
+0 -14 Td
+(- Maintainability: App code stays in src \(api, screens, context, reducers, hooks, navigation\). ) Tj
+0 -14 Td
+(Backend stays in server \(config, models, routes, controllers, middleware\).) Tj
+0 -14 Td
+(- Data handling: Shared data is stored in MongoDB. The app stores only JWT and user profile in ) Tj
+0 -14 Td
+(AsyncStorage so the session survives an app restart. Menu edits are not stored locally.) Tj
+0 -14 Td
+(- Security: Passwords are hashed with bcrypt. Protected routes require Authorization: Bearer &l) Tj
+0 -14 Td
+(t;token&gt;. Menu writes require the manager role.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(## 5. Database Design) Tj
+0 -14 Td
+(Database name: `restaurant_app`.) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(| Collection | Fields and types | Relationships and rules |) Tj
+0 -14 Td
+(| --- | --- | --- |) Tj
+0 -14 Td
+(| Users | name String required; email String required unique lowercase; password String require) Tj
+0 -14 Td
+(d min 8; role enum customer\\|manager default customer | One user has many Orders and Reservatio) Tj
+0 -14 Td
+(ns. Email is unique. Password is stored hashed, never returned by APIs. |) Tj
+0 -14 Td
+(| MenuItems | name String required; description String; price Number required min 0; category S) Tj
+0 -14 Td
+(tring required; isAvailable Boolean default true; imageUrl String; isSpecial Boolean default fa) Tj
+0 -14 Td
+(lse | Orders store a copy of unit price plus a reference to MenuItem. Unavailable items cannot ) Tj
+0 -14 Td
+(be ordered. |) Tj
+0 -14 Td
+(| Tables | tableNumber Number required unique; capacity Number required min 1; location String ) Tj
+0 -14 Td
+(| Reservations reference a Table. Party size cannot exceed capacity. |) Tj
+0 -14 Td
+(| Reservations | user ObjectId required ref User; table ObjectId required ref Table; reservatio) Tj
+0 -14 Td
+(nDate Date required; timeSlot String required; partySize Number 1?12; phone String 03XX-XXXXXXX) Tj
+0 -14 Td
+(; status enum Pending\\|Confirmed\\|Declined\\|Cancelled default Pending; createdAt/updatedAt | Un) Tj
+0 -14 Td
+(ique pending/confirmed booking per table+date+time. Conflicting bookings return 409. Timestamps) Tj
+0 -14 Td
+( enabled. |) Tj
+0 -14 Td
+(| Orders | user ObjectId required ref User; items[{ menuItem ObjectId ref MenuItem, quantity mi) Tj
+0 -14 Td
+(n 1, price min 0, note }]; totalAmount Number min 0; status enum Pending\\|Preparing\\|Ready\\|Ser) Tj
+0 -14 Td
+(ved\\|Cancelled default Pending; type enum Dine-in\\|Takeaway; createdAt/updatedAt | totalAmount ) Tj
+0 -14 Td
+(is calculated on the server from database prices. Status may only move forward, or Cancelled wh) Tj
+0 -14 Td
+(ile Pending. Timestamps enabled. |) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(## 8. API Endpoints) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(| Method | Endpoint | Access | Request body | Response |) Tj
+0 -14 Td
+(| --- | --- | --- | --- | --- |) Tj
+0 -14 Td
+(| GET | /api/health | Public | None | status, time |) Tj
+0 -14 Td
+(| POST | /api/auth/register | Public | name, email, password | message \(201\) or 409 |) Tj
+0 -14 Td
+(| POST | /api/auth/login | Public | email, password | token and user |) Tj
+0 -14 Td
+(| GET | /api/menu | Public | None \(query: category, search\) | List of menu items |) Tj
+0 -14 Td
+(| GET | /api/menu/:id | Public | None | One item or 404 |) Tj
+0 -14 Td
+(| POST | /api/menu | Manager | name, price, category, ... | Created item \(201\) |) Tj
+0 -14 Td
+(| PUT | /api/menu/:id | Manager | fields to update | Updated item |) Tj
+0 -14 Td
+(| DELETE | /api/menu/:id | Manager | None | Delete message |) Tj
+0 -14 Td
+(| POST | /api/orders | Customer/Manager | items[{menuItem, quantity, note}], type | Created ord) Tj
+0 -14 Td
+(er; total from DB |) Tj
+0 -14 Td
+(| GET | /api/orders/my | Logged-in | None | Caller's orders |) Tj
+0 -14 Td
+ET
+endstream
+endobj
+5 0 obj
+<< /Length 998 >>
+stream
+BT
+/F1 11 Tf
+14 800 Td
+(| GET | /api/orders | Manager | None | All orders |) Tj
+0 -14 Td
+(| PATCH | /api/orders/:id/status | Manager | status | Updated order or 400 |) Tj
+0 -14 Td
+(| GET | /api/reservations/tables | Public | None | List of tables |) Tj
+0 -14 Td
+(| POST | /api/reservations | Logged-in | table, reservationDate, timeSlot, partySize, phone | C) Tj
+0 -14 Td
+(reated reservation or 409 |) Tj
+0 -14 Td
+(| GET | /api/reservations/my | Logged-in | None | Caller's reservations |) Tj
+0 -14 Td
+(| GET | /api/reservations | Manager | None | All reservations |) Tj
+0 -14 Td
+(| PATCH | /api/reservations/:id | Manager | status Confirmed\\|Declined | Updated reservation |) Tj
+0 -14 Td
+(| PATCH | /api/reservations/:id/cancel | Owner | None | Cancelled reservation |) Tj
+0 -14 Td
+( ) Tj
+0 -14 Td
+(## 9. Diagrams) Tj
+0 -14 Td
+(See `A2/diagrams/sequence-order.svg` \(App, Express Server, MongoDB\) and `A2/diagrams/deployment) Tj
+0 -14 Td
+(.svg` \(phone, laptop server, MongoDB\).) Tj
+0 -14 Td
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 10 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+7 0 obj
+<< /Type /Page /Parent 10 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+8 0 obj
+<< /Type /Page /Parent 10 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 4 0 R >>
+endobj
+9 0 obj
+<< /Type /Page /Parent 10 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 5 0 R >>
+endobj
+10 0 obj
+<< /Type /Pages /Kids [6 0 R 7 0 R 8 0 R 9 0 R] /Count 4 >>
+endobj
+11 0 obj
+<< /Type /Catalog /Pages 10 0 R >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000003727 00000 n 
+0000006880 00000 n 
+0000011016 00000 n 
+0000012065 00000 n 
+0000012192 00000 n 
+0000012319 00000 n 
+0000012446 00000 n 
+0000012573 00000 n 
+0000012649 00000 n 
+trailer
+<< /Size 12 /Root 11 0 R >>
+startxref
+12700
+%%EOF

@@ -1,62 +1,174 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { View, FlatList, TextInput, ActivityIndicator } from 'react-native';
-import { menuData, MenuItem } from '../data/menu';
-import { useDebounce } from '../hooks/useDebounce';
-import MenuItemCard from '../components/MenuItemCard';
-import { useCart } from '../context/CartContext';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Button,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import MenuItemCard from "../components/MenuItemCard";
+import { useCart } from "../context/CartContext";
+import { useApi } from "../hooks/useApi";
+import { useDebounce } from "../hooks/useDebounce";
+import { MenuItem } from "../types";
+
+const CATEGORIES = ["All", "Starters", "Mains", "Sides", "Desserts", "Drinks"];
 
 export default function MenuScreen({ navigation }: { navigation: any }) {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [category, setCategory] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const debouncedSearch = useDebounce(searchTerm, 400);
   const searchInputRef = useRef<TextInput>(null);
-  
   const { dispatch } = useCart();
 
-  useEffect(() => {
-    let isMounted = true;
-    const timer = setTimeout(() => {
-      if (isMounted) {
-        setMenuItems(menuData);
-        setIsLoading(false);
-      }
-    }, 1500);
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, []);
+  const query = useMemo(() => {
+    const params = new URLSearchParams();
+    if (category !== "All") params.set("category", category);
+    if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
+    const qs = params.toString();
+    return qs ? `/menu?${qs}` : "/menu";
+  }, [category, debouncedSearch]);
 
-  const filteredItems = useMemo(() => {
-    if (!debouncedSearch) return menuItems;
-    return menuItems.filter(item => item.name.toLowerCase().includes(debouncedSearch.toLowerCase()));
-  }, [debouncedSearch, menuItems]);
+  const { data: menuItems, loading, error, refetch } = useApi(query);
+
+  const itemsArray = (menuItems as MenuItem[] | null) ?? [];
 
   useEffect(() => {
-    navigation.setOptions({ title: `Menu (${filteredItems.length} items)` });
-  }, [filteredItems, navigation]);
+    if (debouncedSearch.trim()) {
+      setRecentSearches((prev) => {
+        const next = [
+          debouncedSearch.trim(),
+          ...prev.filter((term) => term !== debouncedSearch.trim()),
+        ];
+        return next.slice(0, 5);
+      });
+    }
+  }, [debouncedSearch]);
 
-  const onAddToCart = useCallback((item: MenuItem) => {
-    dispatch({ type: 'ADD_ITEM', payload: item });
-  }, [dispatch]);
+  useEffect(() => {
+    navigation.setOptions({ title: `Menu (${itemsArray.length} items)` });
+  }, [itemsArray.length, navigation]);
 
-  if (isLoading) return <ActivityIndicator size="large" />;
+  const onAddToCart = useCallback(
+    (item: MenuItem) => {
+      dispatch({ type: "ADD_ITEM", payload: item });
+    },
+    [dispatch],
+  );
+
+  if (loading && !menuItems) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#E63946" />
+      </View>
+    );
+  }
+
+  if (error && !menuItems) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button title="Retry" onPress={() => refetch()} />
+      </View>
+    );
+  }
 
   return (
-    <View>
-      <TextInput 
+    <View style={styles.container}>
+      <TextInput
         ref={searchInputRef}
-        placeholder="Search menu..." 
-        value={searchTerm} 
-        onChangeText={setSearchTerm} 
-        style={{ borderWidth: 1, padding: 10, margin: 10 }}
+        placeholder="Search menu..."
+        value={searchTerm}
+        onChangeText={setSearchTerm}
+        style={styles.searchInput}
       />
+      {recentSearches.length > 0 ? (
+        <View style={styles.recentRow}>
+          {recentSearches.map((term) => (
+            <TouchableOpacity
+              key={term}
+              style={styles.recentChip}
+              onPress={() => setSearchTerm(term)}
+            >
+              <Text style={styles.recentText}>{term}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
+      <View style={styles.categoryRow}>
+        {CATEGORIES.map((item) => (
+          <TouchableOpacity
+            key={item}
+            style={[styles.chip, category === item && styles.chipActive]}
+            onPress={() => setCategory(item)}
+          >
+            <Text style={[styles.chipText, category === item && styles.chipTextActive]}>
+              {item}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <FlatList
-        data={filteredItems}
-        keyExtractor={(item) => item.id.toString()}
+        data={itemsArray}
+        keyExtractor={(item) => item._id}
         renderItem={({ item }) => <MenuItemCard item={item} onAdd={onAddToCart} />}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={() => refetch()} />
+        }
+        ListEmptyComponent={<Text style={styles.empty}>No menu items found.</Text>}
       />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fff" },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: { color: "red", marginBottom: 10, textAlign: "center" },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    margin: 10,
+    borderRadius: 5,
+  },
+  recentRow: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 10 },
+  recentChip: {
+    backgroundColor: "#F1F3F5",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  recentText: { color: "#495057", fontSize: 12 },
+  categoryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 10,
+    marginBottom: 4,
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: "#DEE2E6",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  chipActive: { backgroundColor: "#E63946", borderColor: "#E63946" },
+  chipText: { color: "#495057", fontWeight: "600" },
+  chipTextActive: { color: "#fff" },
+  empty: { textAlign: "center", marginTop: 24, color: "#6C757D" },
+});
