@@ -93,10 +93,6 @@ Postman collection: `A2/restaurant-api.postman_collection.json`
 5. Manager: accept the booking and mark the order Ready.
 6. Customer Orders/Reservations tabs update without restarting (orders poll every 10 seconds).
 
-## Demo video
-
-- **Two-device screen recording (max 4 minutes):** _Add your Drive/YouTube link here after recording._
-
 ## Repo layout
 
 - `server/` — Express API (config, models, routes, controllers, middleware)
